@@ -5,6 +5,7 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.SerializationFeature;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
+import org.springframework.boot.autoconfigure.flyway.FlywayMigrationStrategy;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Primary;
@@ -58,5 +59,22 @@ public class AppConfig {
         mapper.disable(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES);
 
         return mapper;
+    }
+
+    /**
+     * Estratégia de migração personalizada para o Flyway.
+     *
+     * Executa o método repair() antes de migrate() para corrigir automaticamente
+     * quaisquer divergências ou incompatibilidades de checksum nos arquivos de migração
+     * locais em relação ao que já foi aplicado no banco de dados durante o desenvolvimento.
+     *
+     * @return FlywayMigrationStrategy configurado
+     */
+    @Bean
+    public FlywayMigrationStrategy flywayMigrationStrategy() {
+        return flyway -> {
+            flyway.repair();
+            flyway.migrate();
+        };
     }
 }
