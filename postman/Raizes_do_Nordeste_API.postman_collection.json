@@ -1,0 +1,1547 @@
+{
+  "info": {
+    "_postman_id": "raizes-do-nordeste-api-v1",
+    "name": "🌿 Raízes do Nordeste API",
+    "description": "# Raízes do Nordeste — API REST\n\nSistema backend completo para rede de lanchonetes nordestinas com suporte **multicanal** (APP, TOTEM, BALCÃO, PICKUP, WEB).\n\n---\n\n## 🚀 Como usar esta coleção\n\n1. **Importe** este arquivo no Postman\n2. Certifique-se de que o servidor está rodando em `http://localhost:8080`\n3. Execute primeiro o request **\"Login (Admin)\"** na pasta Autenticação\n4. O token JWT será salvo automaticamente na variável `{{token}}`\n5. Todos os demais requests usarão o token automaticamente via Bearer Auth\n\n---\n\n## 👤 Usuários de Teste (seed)\n\n| Email | Senha | Perfil |\n|---|---|---|\n| admin@raizesdonordeste.com | Admin@123 | ADMIN |\n| gerente@raizesdonordeste.com | Admin@123 | GERENTE |\n| cliente@raizesdonordeste.com | Admin@123 | CLIENTE |\n\n---\n\n## 📦 Unidades (seed)\n\n| ID | Nome | Cidade |\n|---|---|---|\n| 1 | Raízes Fortaleza Centro | Fortaleza/CE |\n| 2 | Raízes Recife Boa Viagem | Recife/PE |\n| 3 | Raízes Salvador Pelourinho | Salvador/BA |\n\n---\n\n## 🍽️ Produtos (seed) — IDs 1 a 10\n\nAcarajé, Tapioca, Baião de Dois, Carne de Sol, Cuscuz, Queijo Coalho, Cartola, Bolo de Rolo, Água de Coco, Cajuína\n\n---\n\n## 🔄 Fluxo completo sugerido\n\n1. Login como **Admin** → token salvo\n2. Listar **Produtos** e **Unidades**\n3. Login como **Cliente**\n4. Criar **Pedido** via canal APP\n5. Processar **Pagamento** (PIX)\n6. Login como **Gerente**\n7. Atualizar status: EM_PREPARO → PRONTO → ENTREGUE\n8. Login como **Cliente** novamente\n9. Consultar **Fidelidade** (pontos acumulados)\n\n---\n\n## ⚙️ Tecnologias\n\nJava 21 · Spring Boot 3.3.5 · PostgreSQL 16 · JWT · Docker",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080/api/v1",
+      "type": "string"
+    },
+    {
+      "key": "token",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "pedidoId",
+      "value": "",
+      "type": "string"
+    },
+    {
+      "key": "usuarioId",
+      "value": "",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "🔐 Autenticação",
+      "description": "Endpoints públicos de registro e login.\n\nO login retorna um token JWT que é salvo automaticamente na variável `{{token}}`.",
+      "item": [
+        {
+          "name": "Registrar Novo Usuário",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Retorna dados do usuário sem senha', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('nome');",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json).to.have.property('cpfMascarado');",
+                  "    pm.expect(json).to.not.have.property('senhaHash');",
+                  "    pm.expect(json).to.not.have.property('senha');",
+                  "});",
+                  "",
+                  "pm.test('CPF está mascarado (LGPD)', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.cpfMascarado).to.match(/\\*\\*\\*\\.\\*\\*\\*\\.\\*\\*\\*-\\d{2}/);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('usuarioId', pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nome\": \"João Nordestino\",\n    \"email\": \"joao.nordestino@teste.com\",\n    \"senha\": \"Senha@123\",\n    \"cpf\": \"444.555.666-77\",\n    \"telefone\": \"(85) 99999-8888\",\n    \"consentimentoLgpd\": true\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/registro",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "registro"]
+            },
+            "description": "Cadastra um novo usuário no sistema.\n\n**Regras:**\n- Email e CPF devem ser únicos\n- Senha mínima de 6 caracteres\n- `consentimentoLgpd` é obrigatório (true)\n- Perfil padrão: CLIENTE"
+          }
+        },
+        {
+          "name": "Login (Admin) ⭐",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna token JWT', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('accessToken');",
+                  "    pm.expect(json).to.have.property('tokenType', 'Bearer');",
+                  "    pm.expect(json).to.have.property('expiresIn');",
+                  "    pm.expect(json).to.have.property('usuario');",
+                  "});",
+                  "",
+                  "pm.test('Token salvo na variável de coleção', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.collectionVariables.set('token', json.accessToken);",
+                  "    console.log('✅ Token ADMIN salvo com sucesso!');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"admin@raizesdonordeste.com\",\n    \"senha\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Autentica como **ADMIN** e salva o token JWT automaticamente.\n\n⭐ **Execute este primeiro** para que os demais requests funcionem."
+          }
+        },
+        {
+          "name": "Login (Gerente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('token', json.accessToken);",
+                  "    console.log('✅ Token GERENTE salvo com sucesso!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"gerente@raizesdonordeste.com\",\n    \"senha\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Autentica como **GERENTE** — acesso a estoque, pedidos e produtos."
+          }
+        },
+        {
+          "name": "Login (Cliente)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "if (json.accessToken) {",
+                  "    pm.collectionVariables.set('token', json.accessToken);",
+                  "    console.log('✅ Token CLIENTE salvo com sucesso!');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": {
+              "type": "noauth"
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"cliente@raizesdonordeste.com\",\n    \"senha\": \"Admin@123\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["auth", "login"]
+            },
+            "description": "Autentica como **CLIENTE** — acesso a pedidos, pagamentos e fidelidade."
+          }
+        }
+      ]
+    },
+    {
+      "name": "👤 Usuários",
+      "description": "Gerenciamento de usuários do sistema.\n\n**Permissões:**\n- `GET /` — ADMIN\n- `GET /{id}` — ADMIN, GERENTE\n- `GET /perfil` — Qualquer autenticado\n- `DELETE /{id}` — ADMIN",
+      "item": [
+        {
+          "name": "Listar Todos os Usuários (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna paginação', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(json).to.have.property('totalElements');",
+                  "    pm.expect(json).to.have.property('totalPages');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/usuarios?page=0&size=10&sort=id,asc",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" },
+                { "key": "sort", "value": "id,asc" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Usuário por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('CPF está mascarado (LGPD)', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.cpfMascarado).to.match(/\\*\\*\\*/);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "1"]
+            }
+          }
+        },
+        {
+          "name": "Meu Perfil (Usuário Logado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna dados do perfil', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('nome');",
+                  "    pm.expect(json).to.have.property('email');",
+                  "    pm.expect(json).to.have.property('perfil');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/perfil",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "perfil"]
+            }
+          }
+        },
+        {
+          "name": "Desativar Usuário (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/usuarios/3",
+              "host": ["{{baseUrl}}"],
+              "path": ["usuarios", "3"]
+            },
+            "description": "Desativa o usuário (soft delete). O usuário não poderá mais fazer login."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🏪 Unidades",
+      "description": "Gerenciamento das unidades da rede de lanchonetes.\n\n**Endpoints públicos:** GET (listar e buscar)\n**Endpoints protegidos:** POST, PUT (ADMIN/GERENTE), DELETE (ADMIN)",
+      "item": [
+        {
+          "name": "Listar Unidades (Público)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna lista paginada de unidades', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content).to.be.an('array');",
+                  "    pm.expect(json.totalElements).to.be.at.least(1);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/unidades?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["unidades"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Buscar Unidade por ID (Público)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna dados da unidade', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('nome');",
+                  "    pm.expect(json).to.have.property('cidade');",
+                  "    pm.expect(json).to.have.property('estado');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/unidades/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["unidades", "1"]
+            }
+          }
+        },
+        {
+          "name": "Criar Nova Unidade (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Retorna unidade criada', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.nome).to.eql('Raízes Natal Ponta Negra');",
+                  "    pm.expect(json.estado).to.eql('RN');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nome\": \"Raízes Natal Ponta Negra\",\n    \"endereco\": \"Av. Eng. Roberto Freire, 3000 - Ponta Negra\",\n    \"cidade\": \"Natal\",\n    \"estado\": \"RN\",\n    \"telefone\": \"(84) 3333-0004\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/unidades",
+              "host": ["{{baseUrl}}"],
+              "path": ["unidades"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Unidade (ADMIN/GERENTE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"telefone\": \"(85) 3333-9999\",\n    \"endereco\": \"Rua Barão de Aracati, 500 - Meireles\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/unidades/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["unidades", "1"]
+            },
+            "description": "Atualização parcial — apenas campos enviados são atualizados."
+          }
+        },
+        {
+          "name": "Desativar Unidade (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/unidades/3",
+              "host": ["{{baseUrl}}"],
+              "path": ["unidades", "3"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "🍽️ Produtos / Cardápio",
+      "description": "Gerenciamento do cardápio de produtos nordestinos.\n\n**Públicos:** GET (listar, buscar, filtrar por categoria)\n**Protegidos:** POST, PUT (ADMIN/GERENTE), DELETE (ADMIN)",
+      "item": [
+        {
+          "name": "Listar Produtos (Público)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna lista paginada', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/produtos?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["produtos"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filtrar Produtos por Categoria (Público)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/produtos?categoria=SALGADOS&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["produtos"],
+              "query": [
+                { "key": "categoria", "value": "SALGADOS" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Categorias disponíveis: SALGADOS, PRATOS, SOBREMESAS, BEBIDAS"
+          }
+        },
+        {
+          "name": "Buscar Produto por ID (Público)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna dados do produto', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('nome');",
+                  "    pm.expect(json).to.have.property('preco');",
+                  "    pm.expect(json).to.have.property('categoria');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/produtos/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["produtos", "1"]
+            }
+          }
+        },
+        {
+          "name": "Criar Novo Produto (ADMIN/GERENTE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Retorna produto criado com ID', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.nome).to.eql('Paçoca de Carne de Sol');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"nome\": \"Paçoca de Carne de Sol\",\n    \"descricao\": \"Carne de sol desfiada com farinha de mandioca, banana e manteiga de garrafa\",\n    \"categoria\": \"PRATOS\",\n    \"preco\": 24.90,\n    \"imagemUrl\": \"https://exemplo.com/pacoca-carne-sol.jpg\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produtos",
+              "host": ["{{baseUrl}}"],
+              "path": ["produtos"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Produto (ADMIN/GERENTE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"preco\": 17.90,\n    \"descricao\": \"Acarajé recheado com vatapá e camarão seco — receita autêntica baiana\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/produtos/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["produtos", "1"]
+            }
+          }
+        },
+        {
+          "name": "Desativar Produto (ADMIN)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 204 No Content', function () {",
+                  "    pm.response.to.have.status(204);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "url": {
+              "raw": "{{baseUrl}}/produtos/10",
+              "host": ["{{baseUrl}}"],
+              "path": ["produtos", "10"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "📦 Estoque",
+      "description": "Controle de estoque por unidade com auditoria de movimentações.\n\n**Permissão:** ADMIN ou GERENTE para todos os endpoints.",
+      "item": [
+        {
+          "name": "Consultar Estoque da Unidade",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna itens de estoque', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/estoque/unidade/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["estoque", "unidade", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Consultar Estoque Produto Específico",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna quantidade em estoque', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('quantidade');",
+                  "    pm.expect(json).to.have.property('produtoNome');",
+                  "    pm.expect(json).to.have.property('unidadeNome');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/estoque/unidade/1/produto/1",
+              "host": ["{{baseUrl}}"],
+              "path": ["estoque", "unidade", "1", "produto", "1"]
+            },
+            "description": "Consulta estoque do Acarajé (produto 1) na unidade Fortaleza (unidade 1)."
+          }
+        },
+        {
+          "name": "Registrar Entrada de Estoque",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Quantidade foi atualizada', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('quantidade');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 1,\n    \"produtoId\": 1,\n    \"quantidade\": 50,\n    \"motivo\": \"Reposição semanal de estoque — fornecedor local\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/estoque/entrada",
+              "host": ["{{baseUrl}}"],
+              "path": ["estoque", "entrada"]
+            },
+            "description": "Registra entrada de 50 unidades de Acarajé na unidade Fortaleza.\n\n**Nota:** O tipo ENTRADA é definido automaticamente pelo endpoint."
+          }
+        },
+        {
+          "name": "Registrar Saída de Estoque",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 1,\n    \"produtoId\": 2,\n    \"quantidade\": 5,\n    \"motivo\": \"Perda por validade vencida\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/estoque/saida",
+              "host": ["{{baseUrl}}"],
+              "path": ["estoque", "saida"]
+            }
+          }
+        },
+        {
+          "name": "Listar Movimentações de Estoque",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna histórico de movimentações', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json.content).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/estoque/movimentacoes/1?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["estoque", "movimentacoes", "1"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Lista o histórico de todas as movimentações (entradas e saídas) da unidade 1."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🛒 Pedidos (Multicanal)",
+      "description": "Criação e gerenciamento de pedidos com suporte a **5 canais**:\n- `APP` — Aplicativo mobile\n- `TOTEM` — Totem de autoatendimento\n- `BALCAO` — Atendimento no balcão\n- `PICKUP` — Retirada agendada\n- `WEB` — Pedido pelo site\n\n**Fluxo do pedido:**\n`AGUARDANDO_PAGAMENTO` → `PAGO` → `EM_PREPARO` → `PRONTO` → `ENTREGUE`\n\n**Cancelamento:** Apenas em `AGUARDANDO_PAGAMENTO` ou `PAGO`",
+      "item": [
+        {
+          "name": "Criar Pedido — Canal APP 📱",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Pedido criado com status AGUARDANDO_PAGAMENTO', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json.status).to.eql('AGUARDANDO_PAGAMENTO');",
+                  "    pm.expect(json.canalPedido).to.eql('APP');",
+                  "    pm.expect(json.itens).to.be.an('array').that.is.not.empty;",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    pm.collectionVariables.set('pedidoId', pm.response.json().id);",
+                  "    console.log('✅ Pedido ID salvo: ' + pm.response.json().id);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 1,\n    \"canalPedido\": \"APP\",\n    \"itens\": [\n        {\n            \"produtoId\": 1,\n            \"quantidade\": 2\n        },\n        {\n            \"produtoId\": 3,\n            \"quantidade\": 1\n        },\n        {\n            \"produtoId\": 9,\n            \"quantidade\": 2\n        }\n    ],\n    \"observacao\": \"Sem cebola no acarajé, por favor\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"]
+            },
+            "description": "Cria pedido via **APP** na unidade Fortaleza:\n- 2x Acarajé (R$15.90)\n- 1x Baião de Dois (R$22.90)\n- 2x Água de Coco (R$7.90)\n\n**Regras:**\n- Valida se a unidade está ativa\n- Valida se todos os produtos estão ativos\n- Verifica estoque suficiente para cada item\n- Reserva o estoque automaticamente (saída)\n- Calcula total automaticamente"
+          }
+        },
+        {
+          "name": "Criar Pedido — Canal TOTEM 🖥️",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 201 Created', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test('Canal é TOTEM', function () {",
+                  "    pm.expect(pm.response.json().canalPedido).to.eql('TOTEM');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 2,\n    \"canalPedido\": \"TOTEM\",\n    \"itens\": [\n        {\n            \"produtoId\": 4,\n            \"quantidade\": 1\n        },\n        {\n            \"produtoId\": 5,\n            \"quantidade\": 2\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"]
+            },
+            "description": "Pedido via TOTEM na unidade Recife."
+          }
+        },
+        {
+          "name": "Criar Pedido — Canal BALCÃO 🏪",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 3,\n    \"canalPedido\": \"BALCAO\",\n    \"itens\": [\n        {\n            \"produtoId\": 6,\n            \"quantidade\": 3\n        },\n        {\n            \"produtoId\": 10,\n            \"quantidade\": 3\n        }\n    ],\n    \"observacao\": \"Queijo coalho bem passado\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"]
+            },
+            "description": "Pedido via BALCÃO na unidade Salvador."
+          }
+        },
+        {
+          "name": "Criar Pedido — Canal WEB 🌐",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 1,\n    \"canalPedido\": \"WEB\",\n    \"itens\": [\n        {\n            \"produtoId\": 7,\n            \"quantidade\": 1\n        },\n        {\n            \"produtoId\": 8,\n            \"quantidade\": 2\n        }\n    ]\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"]
+            },
+            "description": "Pedido via site WEB."
+          }
+        },
+        {
+          "name": "Criar Pedido — Canal PICKUP 📦",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"unidadeId\": 2,\n    \"canalPedido\": \"PICKUP\",\n    \"itens\": [\n        {\n            \"produtoId\": 2,\n            \"quantidade\": 4\n        }\n    ],\n    \"observacao\": \"Retirada às 12h\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"]
+            },
+            "description": "Pedido para retirada (PICKUP)."
+          }
+        },
+        {
+          "name": "Buscar Pedido por ID",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna pedido com itens', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('id');",
+                  "    pm.expect(json).to.have.property('total');",
+                  "    pm.expect(json).to.have.property('status');",
+                  "    pm.expect(json).to.have.property('canalPedido');",
+                  "    pm.expect(json.itens).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos/{{pedidoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos", "{{pedidoId}}"]
+            }
+          }
+        },
+        {
+          "name": "Listar Todos os Pedidos (ADMIN/GERENTE)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Filtrar Pedidos por Canal (APP)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos?canalPedido=APP&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"],
+              "query": [
+                { "key": "canalPedido", "value": "APP" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Valores válidos: APP, TOTEM, BALCAO, PICKUP, WEB"
+          }
+        },
+        {
+          "name": "Filtrar Pedidos por Status (PAGO)",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos?status=PAGO&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"],
+              "query": [
+                { "key": "status", "value": "PAGO" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Valores: AGUARDANDO_PAGAMENTO, PAGO, EM_PREPARO, PRONTO, ENTREGUE, CANCELADO"
+          }
+        },
+        {
+          "name": "Filtrar por Canal + Status",
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos?canalPedido=TOTEM&status=AGUARDANDO_PAGAMENTO&page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos"],
+              "query": [
+                { "key": "canalPedido", "value": "TOTEM" },
+                { "key": "status", "value": "AGUARDANDO_PAGAMENTO" },
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Filtro combinado: canal + status para visão operacional."
+          }
+        },
+        {
+          "name": "Meus Pedidos (Cliente Logado)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos/meus-pedidos?page=0&size=10",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos", "meus-pedidos"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "10" }
+              ]
+            },
+            "description": "Lista apenas os pedidos do cliente autenticado."
+          }
+        },
+        {
+          "name": "Atualizar Status → EM_PREPARO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Status atualizado para EM_PREPARO', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('EM_PREPARO');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"EM_PREPARO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos/{{pedidoId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos", "{{pedidoId}}", "status"]
+            },
+            "description": "⚠️ O pedido precisa estar com status PAGO para aceitar esta transição."
+          }
+        },
+        {
+          "name": "Atualizar Status → PRONTO",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status atualizado para PRONTO', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('PRONTO');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"PRONTO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos/{{pedidoId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos", "{{pedidoId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Atualizar Status → ENTREGUE",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status atualizado para ENTREGUE', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('ENTREGUE');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"status\": \"ENTREGUE\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pedidos/{{pedidoId}}/status",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos", "{{pedidoId}}", "status"]
+            }
+          }
+        },
+        {
+          "name": "Cancelar Pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Pedido cancelado com sucesso', function () {",
+                  "    if (pm.response.code === 200) {",
+                  "        pm.expect(pm.response.json().status).to.eql('CANCELADO');",
+                  "    }",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "PATCH",
+            "url": {
+              "raw": "{{baseUrl}}/pedidos/{{pedidoId}}/cancelar",
+              "host": ["{{baseUrl}}"],
+              "path": ["pedidos", "{{pedidoId}}", "cancelar"]
+            },
+            "description": "Cancela o pedido e **restaura o estoque** de todos os itens.\n\n⚠️ Só pode cancelar em status: AGUARDANDO_PAGAMENTO ou PAGO."
+          }
+        }
+      ]
+    },
+    {
+      "name": "💳 Pagamentos (Mock)",
+      "description": "Processamento de pagamento com gateway **mock**.\n\nComportamento simulado:\n- **~70%** → APROVADO ✅\n- **~20%** → RECUSADO ❌\n- **~10%** → TIMEOUT ⏱️\n\nApós aprovação:\n- Status do pedido muda para PAGO\n- Pontos de fidelidade são acumulados automaticamente",
+      "item": [
+        {
+          "name": "Processar Pagamento (PIX)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna resultado do pagamento', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('status');",
+                  "    pm.expect(json).to.have.property('transacaoId');",
+                  "    pm.expect(json).to.have.property('valor');",
+                  "    pm.expect(json).to.have.property('mensagem');",
+                  "    pm.expect(['APROVADO', 'RECUSADO', 'TIMEOUT']).to.include(json.status);",
+                  "});",
+                  "",
+                  "var json = pm.response.json();",
+                  "if (json.status === 'APROVADO') {",
+                  "    console.log('✅ Pagamento APROVADO! Pontos de fidelidade acumulados.');",
+                  "} else if (json.status === 'RECUSADO') {",
+                  "    console.log('❌ Pagamento RECUSADO. Tente novamente.');",
+                  "} else {",
+                  "    console.log('⏱️ TIMEOUT. Tente novamente.');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"pedidoId\": {{pedidoId}},\n    \"formaPagamento\": \"PIX\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pagamentos/processar",
+              "host": ["{{baseUrl}}"],
+              "path": ["pagamentos", "processar"]
+            },
+            "description": "Processa pagamento via PIX.\n\n**Formas de pagamento sugeridas:** PIX, CARTAO_CREDITO, CARTAO_DEBITO, DINHEIRO"
+          }
+        },
+        {
+          "name": "Processar Pagamento (Cartão Crédito)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"pedidoId\": {{pedidoId}},\n    \"formaPagamento\": \"CARTAO_CREDITO\"\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/pagamentos/processar",
+              "host": ["{{baseUrl}}"],
+              "path": ["pagamentos", "processar"]
+            }
+          }
+        },
+        {
+          "name": "Consultar Pagamento do Pedido",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna dados do pagamento', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('formaPagamento');",
+                  "    pm.expect(json).to.have.property('status');",
+                  "    pm.expect(json).to.have.property('valor');",
+                  "    pm.expect(json).to.have.property('transacaoId');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/pagamentos/pedido/{{pedidoId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["pagamentos", "pedido", "{{pedidoId}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "⭐ Fidelidade",
+      "description": "Programa de fidelidade — **1 ponto por R$1 gasto**.\n\nOs pontos são acumulados automaticamente após pagamento aprovado.\nConsulte saldo e histórico com o token do cliente logado.",
+      "item": [
+        {
+          "name": "Consultar Saldo de Pontos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna saldo de fidelidade', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('pontosAcumulados');",
+                  "    pm.expect(json).to.have.property('pontosResgatados');",
+                  "    pm.expect(json).to.have.property('saldo');",
+                  "    pm.expect(json).to.have.property('usuarioNome');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/fidelidade/saldo",
+              "host": ["{{baseUrl}}"],
+              "path": ["fidelidade", "saldo"]
+            },
+            "description": "Consulta o saldo de pontos do cliente logado.\n\n**Dica:** Faça login como cliente, crie um pedido, pague, e depois consulte."
+          }
+        },
+        {
+          "name": "Listar Histórico de Pontos",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Retorna histórico paginado', function () {",
+                  "    var json = pm.response.json();",
+                  "    pm.expect(json).to.have.property('content');",
+                  "    pm.expect(json.content).to.be.an('array');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "url": {
+              "raw": "{{baseUrl}}/fidelidade/historico?page=0&size=20",
+              "host": ["{{baseUrl}}"],
+              "path": ["fidelidade", "historico"],
+              "query": [
+                { "key": "page", "value": "0" },
+                { "key": "size", "value": "20" }
+              ]
+            },
+            "description": "Lista todo o histórico de acúmulo e resgate de pontos."
+          }
+        }
+      ]
+    },
+    {
+      "name": "🔧 Infraestrutura",
+      "description": "Endpoints de infraestrutura e documentação.",
+      "item": [
+        {
+          "name": "Health Check (Actuator)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Status code é 200 OK', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Aplicação está UP', function () {",
+                  "    pm.expect(pm.response.json().status).to.eql('UP');",
+                  "});"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8080/actuator/health",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["actuator", "health"]
+            }
+          }
+        },
+        {
+          "name": "Swagger UI",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8080/swagger-ui.html",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["swagger-ui.html"]
+            },
+            "description": "Abre a documentação interativa da API. ⚠️ Abrir no navegador!"
+          }
+        },
+        {
+          "name": "OpenAPI JSON",
+          "request": {
+            "auth": { "type": "noauth" },
+            "method": "GET",
+            "url": {
+              "raw": "http://localhost:8080/v3/api-docs",
+              "protocol": "http",
+              "host": ["localhost"],
+              "port": "8080",
+              "path": ["v3", "api-docs"]
+            },
+            "description": "Especificação OpenAPI em formato JSON."
+          }
+        }
+      ]
+    }
+  ]
+}
