@@ -1,8 +1,8 @@
 {
   "info": {
     "_postman_id": "raizes-do-nordeste-api-v1",
-    "name": "🌿 Raízes do Nordeste API",
-    "description": "# Raízes do Nordeste — API REST\n\nSistema backend completo para rede de lanchonetes nordestinas com suporte **multicanal** (APP, TOTEM, BALCÃO, PICKUP, WEB).\n\n---\n\n## 🚀 Como usar esta coleção\n\n1. **Importe** este arquivo no Postman\n2. Certifique-se de que o servidor está rodando em `http://localhost:8080`\n3. Execute primeiro o request **\"Login (Admin)\"** na pasta Autenticação\n4. O token JWT será salvo automaticamente na variável `{{token}}`\n5. Todos os demais requests usarão o token automaticamente via Bearer Auth\n\n---\n\n## 👤 Usuários de Teste (seed)\n\n| Email | Senha | Perfil |\n|---|---|---|\n| admin@raizesdonordeste.com | Admin@123 | ADMIN |\n| gerente@raizesdonordeste.com | Admin@123 | GERENTE |\n| cliente@raizesdonordeste.com | Admin@123 | CLIENTE |\n\n---\n\n## 📦 Unidades (seed)\n\n| ID | Nome | Cidade |\n|---|---|---|\n| 1 | Raízes Fortaleza Centro | Fortaleza/CE |\n| 2 | Raízes Recife Boa Viagem | Recife/PE |\n| 3 | Raízes Salvador Pelourinho | Salvador/BA |\n\n---\n\n## 🍽️ Produtos (seed) — IDs 1 a 10\n\nAcarajé, Tapioca, Baião de Dois, Carne de Sol, Cuscuz, Queijo Coalho, Cartola, Bolo de Rolo, Água de Coco, Cajuína\n\n---\n\n## 🔄 Fluxo completo sugerido\n\n1. Login como **Admin** → token salvo\n2. Listar **Produtos** e **Unidades**\n3. Login como **Cliente**\n4. Criar **Pedido** via canal APP\n5. Processar **Pagamento** (PIX)\n6. Login como **Gerente**\n7. Atualizar status: EM_PREPARO → PRONTO → ENTREGUE\n8. Login como **Cliente** novamente\n9. Consultar **Fidelidade** (pontos acumulados)\n\n---\n\n## ⚙️ Tecnologias\n\nJava 21 · Spring Boot 3.3.5 · PostgreSQL 16 · JWT · Docker",
+    "name": "Raízes do Nordeste API",
+    "description": "# Raízes do Nordeste — API REST\n\nSistema backend completo para rede de lanchonetes nordestinas com suporte **multicanal** (APP, TOTEM, BALCÃO, PICKUP, WEB).\n\n---\n\n## Como usar esta coleção\n\n1. **Importe** este arquivo no Postman\n2. Certifique-se de que o servidor está rodando em `http://localhost:8080`\n3. Execute primeiro o request **\"Login (Admin)\"** na pasta Autenticação\n4. O token JWT será salvo automaticamente na variável `{{token}}`\n5. Todos os demais requests usarão o token automaticamente via Bearer Auth\n\n---\n\n## Usuários de Teste (seed)\n\n| Email | Senha | Perfil |\n|---|---|---|\n| admin@raizesdonordeste.com | Admin@123 | ADMIN |\n| gerente@raizesdonordeste.com | Admin@123 | GERENTE |\n| cliente@raizesdonordeste.com | Admin@123 | CLIENTE |\n\n---\n\n## Unidades (seed)\n\n| ID | Nome | Cidade |\n|---|---|---|\n| 1 | Raízes Fortaleza Centro | Fortaleza/CE |\n| 2 | Raízes Recife Boa Viagem | Recife/PE |\n| 3 | Raízes Salvador Pelourinho | Salvador/BA |\n\n---\n\n## Produtos (seed) — IDs 1 a 10\n\nAcarajé, Tapioca, Baião de Dois, Carne de Sol, Cuscuz, Queijo Coalho, Cartola, Bolo de Rolo, Água de Coco, Cajuína\n\n---\n\n## Fluxo completo sugerido\n\n1. Login como **Admin** → token salvo\n2. Listar **Produtos** e **Unidades**\n3. Login como **Cliente**\n4. Criar **Pedido** via canal APP\n5. Processar **Pagamento** (PIX)\n6. Login como **Gerente**\n7. Atualizar status: EM_PREPARO → PRONTO → ENTREGUE\n8. Login como **Cliente** novamente\n9. Consultar **Fidelidade** (pontos acumulados)\n\n---\n\n## Tecnologias\n\nJava 21 · Spring Boot 3.3.5 · PostgreSQL 16 · JWT · Docker",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
   "auth": {
@@ -39,7 +39,7 @@
   ],
   "item": [
     {
-      "name": "🔐 Autenticação",
+      "name": "Autenticação",
       "description": "Endpoints públicos de registro e login.\n\nO login retorna um token JWT que é salvo automaticamente na variável `{{token}}`.",
       "item": [
         {
@@ -100,7 +100,7 @@
           }
         },
         {
-          "name": "Login (Admin) ⭐",
+          "name": "Login (Admin)",
           "event": [
             {
               "listen": "test",
@@ -121,7 +121,7 @@
                   "pm.test('Token salvo na variável de coleção', function () {",
                   "    var json = pm.response.json();",
                   "    pm.collectionVariables.set('token', json.accessToken);",
-                  "    console.log('✅ Token ADMIN salvo com sucesso!');",
+                  "    console.log('Token ADMIN salvo com sucesso!');",
                   "});"
                 ],
                 "type": "text/javascript"
@@ -148,7 +148,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["auth", "login"]
             },
-            "description": "Autentica como **ADMIN** e salva o token JWT automaticamente.\n\n⭐ **Execute este primeiro** para que os demais requests funcionem."
+            "description": "Autentica como **ADMIN** e salva o token JWT automaticamente.\n\n**Execute este primeiro** para que os demais requests funcionem."
           }
         },
         {
@@ -165,7 +165,7 @@
                   "var json = pm.response.json();",
                   "if (json.accessToken) {",
                   "    pm.collectionVariables.set('token', json.accessToken);",
-                  "    console.log('✅ Token GERENTE salvo com sucesso!');",
+                  "    console.log('Token GERENTE salvo com sucesso!');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -209,7 +209,7 @@
                   "var json = pm.response.json();",
                   "if (json.accessToken) {",
                   "    pm.collectionVariables.set('token', json.accessToken);",
-                  "    console.log('✅ Token CLIENTE salvo com sucesso!');",
+                  "    console.log('Token CLIENTE salvo com sucesso!');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -242,7 +242,7 @@
       ]
     },
     {
-      "name": "👤 Usuários",
+      "name": "Usuários",
       "description": "Gerenciamento de usuários do sistema.\n\n**Permissões:**\n- `GET /` — ADMIN\n- `GET /{id}` — ADMIN, GERENTE\n- `GET /perfil` — Qualquer autenticado\n- `DELETE /{id}` — ADMIN",
       "item": [
         {
@@ -369,7 +369,7 @@
       ]
     },
     {
-      "name": "🏪 Unidades",
+      "name": "Unidades",
       "description": "Gerenciamento das unidades da rede de lanchonetes.\n\n**Endpoints públicos:** GET (listar e buscar)\n**Endpoints protegidos:** POST, PUT (ADMIN/GERENTE), DELETE (ADMIN)",
       "item": [
         {
@@ -533,7 +533,7 @@
       ]
     },
     {
-      "name": "🍽️ Produtos / Cardápio",
+      "name": "Produtos / Cardápio",
       "description": "Gerenciamento do cardápio de produtos nordestinos.\n\n**Públicos:** GET (listar, buscar, filtrar por categoria)\n**Protegidos:** POST, PUT (ADMIN/GERENTE), DELETE (ADMIN)",
       "item": [
         {
@@ -724,7 +724,7 @@
       ]
     },
     {
-      "name": "📦 Estoque",
+      "name": "Estoque",
       "description": "Controle de estoque por unidade com auditoria de movimentações.\n\n**Permissão:** ADMIN ou GERENTE para todos os endpoints.",
       "item": [
         {
@@ -893,11 +893,11 @@
       ]
     },
     {
-      "name": "🛒 Pedidos (Multicanal)",
+      "name": "Pedidos (Multicanal)",
       "description": "Criação e gerenciamento de pedidos com suporte a **5 canais**:\n- `APP` — Aplicativo mobile\n- `TOTEM` — Totem de autoatendimento\n- `BALCAO` — Atendimento no balcão\n- `PICKUP` — Retirada agendada\n- `WEB` — Pedido pelo site\n\n**Fluxo do pedido:**\n`AGUARDANDO_PAGAMENTO` → `PAGO` → `EM_PREPARO` → `PRONTO` → `ENTREGUE`\n\n**Cancelamento:** Apenas em `AGUARDANDO_PAGAMENTO` ou `PAGO`",
       "item": [
         {
-          "name": "Criar Pedido — Canal APP 📱",
+          "name": "Criar Pedido — Canal APP",
           "event": [
             {
               "listen": "test",
@@ -917,7 +917,7 @@
                   "",
                   "if (pm.response.code === 201) {",
                   "    pm.collectionVariables.set('pedidoId', pm.response.json().id);",
-                  "    console.log('✅ Pedido ID salvo: ' + pm.response.json().id);",
+                  "    console.log('Pedido ID salvo: ' + pm.response.json().id);",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -940,7 +940,7 @@
           }
         },
         {
-          "name": "Criar Pedido — Canal TOTEM 🖥️",
+          "name": "Criar Pedido — Canal TOTEM",
           "event": [
             {
               "listen": "test",
@@ -974,7 +974,7 @@
           }
         },
         {
-          "name": "Criar Pedido — Canal BALCÃO 🏪",
+          "name": "Criar Pedido — Canal BALCÃO",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -991,7 +991,7 @@
           }
         },
         {
-          "name": "Criar Pedido — Canal WEB 🌐",
+          "name": "Criar Pedido — Canal WEB",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -1008,7 +1008,7 @@
           }
         },
         {
-          "name": "Criar Pedido — Canal PICKUP 📦",
+          "name": "Criar Pedido — Canal PICKUP",
           "request": {
             "method": "POST",
             "header": [{ "key": "Content-Type", "value": "application/json" }],
@@ -1197,7 +1197,7 @@
               "host": ["{{baseUrl}}"],
               "path": ["pedidos", "{{pedidoId}}", "status"]
             },
-            "description": "⚠️ O pedido precisa estar com status PAGO para aceitar esta transição."
+            "description": "O pedido precisa estar com status PAGO para aceitar esta transição."
           }
         },
         {
@@ -1282,14 +1282,14 @@
               "host": ["{{baseUrl}}"],
               "path": ["pedidos", "{{pedidoId}}", "cancelar"]
             },
-            "description": "Cancela o pedido e **restaura o estoque** de todos os itens.\n\n⚠️ Só pode cancelar em status: AGUARDANDO_PAGAMENTO ou PAGO."
+            "description": "Cancela o pedido e **restaura o estoque** de todos os itens.\n\nSó pode cancelar em status: AGUARDANDO_PAGAMENTO ou PAGO."
           }
         }
       ]
     },
     {
-      "name": "💳 Pagamentos (Mock)",
-      "description": "Processamento de pagamento com gateway **mock**.\n\nComportamento simulado:\n- **~70%** → APROVADO ✅\n- **~20%** → RECUSADO ❌\n- **~10%** → TIMEOUT ⏱️\n\nApós aprovação:\n- Status do pedido muda para PAGO\n- Pontos de fidelidade são acumulados automaticamente",
+      "name": "Pagamentos (Mock)",
+      "description": "Processamento de pagamento com gateway **mock**.\n\nComportamento simulado:\n- **~70%** → APROVADO\n- **~20%** → RECUSADO\n- **~10%** → TIMEOUT\n\nApós aprovação:\n- Status do pedido muda para PAGO\n- Pontos de fidelidade são acumulados automaticamente",
       "item": [
         {
           "name": "Processar Pagamento (PIX)",
@@ -1313,11 +1313,11 @@
                   "",
                   "var json = pm.response.json();",
                   "if (json.status === 'APROVADO') {",
-                  "    console.log('✅ Pagamento APROVADO! Pontos de fidelidade acumulados.');",
+                  "    console.log('Pagamento APROVADO! Pontos de fidelidade acumulados.');",
                   "} else if (json.status === 'RECUSADO') {",
-                  "    console.log('❌ Pagamento RECUSADO. Tente novamente.');",
+                  "    console.log('Pagamento RECUSADO. Tente novamente.');",
                   "} else {",
-                  "    console.log('⏱️ TIMEOUT. Tente novamente.');",
+                  "    console.log('TIMEOUT. Tente novamente.');",
                   "}"
                 ],
                 "type": "text/javascript"
@@ -1403,7 +1403,7 @@
       ]
     },
     {
-      "name": "⭐ Fidelidade",
+      "name": "Fidelidade",
       "description": "Programa de fidelidade — **1 ponto por R$1 gasto**.\n\nOs pontos são acumulados automaticamente após pagamento aprovado.\nConsulte saldo e histórico com o token do cliente logado.",
       "item": [
         {
@@ -1477,7 +1477,7 @@
       ]
     },
     {
-      "name": "🔧 Infraestrutura",
+      "name": "Infraestrutura",
       "description": "Endpoints de infraestrutura e documentação.",
       "item": [
         {
@@ -1523,7 +1523,7 @@
               "port": "8080",
               "path": ["swagger-ui.html"]
             },
-            "description": "Abre a documentação interativa da API. ⚠️ Abrir no navegador!"
+            "description": "Abre a documentação interativa da API. Abrir no navegador!"
           }
         },
         {

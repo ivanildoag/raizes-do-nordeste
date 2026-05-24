@@ -1,23 +1,23 @@
-# 🌿 Raízes do Nordeste - API Backend
+# Raízes do Nordeste - API Backend
 
 Sistema backend completo para rede de lanchonetes **Raízes do Nordeste**, com suporte multicanal (APP, TOTEM, BALCÃO, PICKUP, WEB).
 
-## 📋 Funcionalidades
+## Funcionalidades
 
-- ✅ **Autenticação JWT** com registro e login
-- ✅ **Gerenciamento de usuários** com perfis (ADMIN, GERENTE, CLIENTE)
-- ✅ **Gerenciamento de unidades** da rede
-- ✅ **Cardápio de produtos** com categorias nordestinas
-- ✅ **Controle de estoque** por unidade com auditoria de movimentações
-- ✅ **Pedidos multicanal** com validação de estoque e transições de status
-- ✅ **Pagamento mock** (70% aprovado, 20% recusado, 10% timeout)
-- ✅ **Programa de fidelidade** (1 ponto por R$1 gasto)
-- ✅ **Documentação Swagger/OpenAPI** interativa
-- ✅ **Tratamento padronizado de erros** em JSON
-- ✅ **Conformidade LGPD** (CPF mascarado, consentimento obrigatório)
-- ✅ **Testes automatizados** (unitários e integração)
+- **Autenticação JWT** com registro e login
+- **Gerenciamento de usuários** com perfis (ADMIN, GERENTE, CLIENTE)
+- **Gerenciamento de unidades** da rede
+- **Cardápio de produtos** com categorias nordestinas
+- **Controle de estoque** por unidade com auditoria de movimentações
+- **Pedidos multicanal** com validação de estoque e transições de status
+- **Pagamento mock** (70% aprovado, 20% recusado, 10% timeout)
+- **Programa de fidelidade** (1 ponto por R$1 gasto)
+- **Documentação Swagger/OpenAPI** interativa
+- **Tratamento padronizado de erros** em JSON
+- **Conformidade LGPD** (CPF mascarado, consentimento obrigatório)
+- **Testes automatizados** (unitários e integração)
 
-## 🛠️ Tecnologias
+## Tecnologias
 
 | Tecnologia | Versão |
 |---|---|
@@ -33,7 +33,7 @@ Sistema backend completo para rede de lanchonetes **Raízes do Nordeste**, com s
 | Testcontainers | Testes de integração |
 | Lombok | Redução de boilerplate |
 
-## 🏗️ Arquitetura
+## Arquitetura
 
 O projeto segue **Clean Architecture** com separação clara de camadas:
 
@@ -45,7 +45,7 @@ src/main/java/com/raizesdonordeste/
 └── api/              # Controllers, exception handler (adapters)
 ```
 
-## 🚀 Como Executar
+## Como Executar
 
 ### Com Docker Compose (recomendado)
 
@@ -71,7 +71,7 @@ Requisitos: Java 21, Maven, PostgreSQL rodando localmente.
 ./mvnw spring-boot:run
 ```
 
-## 📚 Documentação da API
+## Documentação da API
 
 Acesse o **Swagger UI** em: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
 
@@ -97,7 +97,7 @@ Acesse o **Swagger UI** em: [http://localhost:8080/swagger-ui.html](http://local
 | gerente@raizesdonordeste.com | Admin@123 | GERENTE |
 | cliente@raizesdonordeste.com | Admin@123 | CLIENTE |
 
-## 🧪 Testes
+## Testes
 
 ```bash
 # Executar todos os testes
@@ -117,7 +117,7 @@ Acesse o **Swagger UI** em: [http://localhost:8080/swagger-ui.html](http://local
 - **UsuarioMapper**: Mascaramento de CPF (LGPD)
 - **AuthController**: Integração HTTP com MockMvc
 
-## 📊 Modelo de Dados
+## Modelo de Dados
 
 ```
 usuarios ─┬── pedidos ─── itens_pedido
@@ -133,6 +133,6 @@ usuarios ─┬── pedidos ─── itens_pedido
 unidades ──┼── estoque ──── produtos
 ```
 
-## 📝 Licença
+## Licença
 
 Projeto acadêmico - Uso educacional.
