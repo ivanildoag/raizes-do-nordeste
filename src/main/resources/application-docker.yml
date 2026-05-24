@@ -1,0 +1,11 @@
+# Perfil Docker - sobrescreve configurações para ambiente containerizado
+spring:
+  datasource:
+    url: jdbc:postgresql://postgres:5432/raizesdonordeste
+    username: ${DATABASE_USERNAME:postgres}
+    password: ${DATABASE_PASSWORD:postgres}
+
+logging:
+  level:
+    com.raizesdonordeste: INFO
+    org.hibernate.SQL: WARN
