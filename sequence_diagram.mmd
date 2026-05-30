@@ -1,0 +1,43 @@
+sequenceDiagram
+    autonumber
+    actor C as Cliente
+    participant API as API (Controller)
+    participant PS as PedidoService
+    participant ES as EstoqueService
+    participant GW as GatewayMock
+
+    rect rgb(230, 240, 255)
+    note right of C: 1. Criacao e Garantia de Estoque
+    C->>API: POST /pedidos
+    API->>PS: iniciarTransacao(request)
+    PS->>ES: verificarDisponibilidade()
+    ES-->>PS: true (disponivel)
+    PS->>ES: registrarSaidaEstoque(reserva)
+    PS-->>API: Commit Transacao (AGUARDANDO_PAGAMENTO)
+    API-->>C: 201 Created (Pedido Salvo)
+    end
+
+    rect rgb(255, 240, 230)
+    note right of C: 2. Orquestracao do Pagamento
+    C->>API: POST /pagamentos/processar
+    API->>PS: processarPagamento(pedidoId)
+    PS->>GW: processar(valor)
+    GW-->>PS: Callback (APROVADO / RECUSADO)
+    
+    alt Pagamento APROVADO
+        PS->>PS: atualizarStatus(PAGO)
+        PS->>PS: creditarFidelidade(1 pt)
+    else Pagamento RECUSADO
+        PS->>PS: mantem (AGUARDANDO_PAGAMENTO)
+    end
+    PS-->>API: Transacao Salva
+    API-->>C: 200 OK (PagamentoResponse)
+    end
+
+    rect rgb(230, 255, 230)
+    note right of C: 3. Mudanca de Estado
+    C->>API: PATCH /pedidos/{id}/status
+    API->>PS: atualizarStatus(novoStatus)
+    PS-->>API: Status Atualizado (EM_PREPARO / ENTREGUE)
+    API-->>C: 200 OK
+    end

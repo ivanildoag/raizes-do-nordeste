@@ -1,0 +1,76 @@
+classDiagram
+    direction TB
+
+    class Usuario {
+        +Long id
+        +String nome
+        +String email
+        +String senhaHash
+        +String cpf
+        +PerfilUsuario perfil
+        +Boolean ativo
+        +Boolean consentimentoLgpd
+    }
+
+    class Fidelidade {
+        +Long id
+        +Integer pontosAcumulados
+        +Integer saldo
+    }
+
+    class Unidade {
+        +Long id
+        +String nome
+        +String endereco
+        +String cidade
+        +String estado
+        +Boolean ativa
+    }
+
+    class Produto {
+        +Long id
+        +String nome
+        +String descricao
+        +String categoria
+        +BigDecimal preco
+        +Boolean ativo
+    }
+
+    class Pedido {
+        +Long id
+        +CanalPedido canalPedido
+        +StatusPedido status
+        +BigDecimal total
+        +String observacao
+    }
+
+    class ItemPedido {
+        +Long id
+        +Integer quantidade
+        +BigDecimal precoUnitario
+        +BigDecimal subtotal
+    }
+
+    class Pagamento {
+        +Long id
+        +String formaPagamento
+        +StatusPagamento status
+        +BigDecimal valor
+        +String transacaoId
+        +String mensagem
+    }
+
+    class Estoque {
+        +Long id
+        +Integer quantidade
+    }
+
+    %% Relacionamentos
+    Usuario "1" -- "1" Fidelidade : possui
+    Usuario "1" -- "*" Pedido : realiza
+    Unidade "1" -- "*" Pedido : atende
+    Pedido "1" *-- "*" ItemPedido : composto por
+    Produto "1" -- "*" ItemPedido : pertence ao
+    Pedido "1" -- "1..*" Pagamento : gera
+    Unidade "1" -- "*" Estoque : mantem
+    Produto "1" -- "*" Estoque : alocado no
