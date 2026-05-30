@@ -30,3 +30,4 @@ Thumbs.db
 *.jar
 !.mvn/wrapper/*.jar
 *.war
+.tmp/
